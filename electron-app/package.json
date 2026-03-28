@@ -1,0 +1,13 @@
+{
+  "name": "screen-translator-overlay",
+  "version": "2.0.0",
+  "description": "Dịch màn hình realtime - kéo thả chọn vùng, không cần Alt+Tab",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "dependencies": {
+    "electron": "^28.0.0"
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "name": "screen-translator",
+  "displayName": "Screen Translator",
+  "description": "Dịch màn hình realtime cho game/app tiếng Nhật, Trung",
+  "version": "1.0.0",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./out/extension.js",
+
+  "contributes": {
+    "commands": [
+      {
+        "command": "screenTranslator.translateScreen",
+        "title": "Dịch toàn màn hình",
+        "category": "Screen Translator"
+      },
+      {
+        "command": "screenTranslator.selectRegion",
+        "title": "Chọn vùng để dịch",
+        "category": "Screen Translator"
+      },
+      {
+        "command": "screenTranslator.toggleOverlay",
+        "title": "Bật/tắt Overlay",
+        "category": "Screen Translator"
+      },
+      {
+        "command": "screenTranslator.switchLang",
+        "title": "Đổi ngôn ngữ đích (VI ↔ EN)",
+        "category": "Screen Translator"
+      }
+    ],
+
+    "keybindings": [
+      {
+        "command": "screenTranslator.translateScreen",
+        "key": "F2",
+        "when": "!inputFocus"
+      },
+      {
+        "command": "screenTranslator.selectRegion",
+        "key": "F3",
+        "when": "!inputFocus"
+      },
+      {
+        "command": "screenTranslator.toggleOverlay",
+        "key": "F4",
+        "when": "!inputFocus"
+      },
+      {
+        "command": "screenTranslator.switchLang",
+        "key": "F5",
+        "when": "!inputFocus"
+      }
+    ],
+
+    "configuration": {
+      "title": "Screen Translator",
+      "properties": {
+        "screenTranslator.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "URL của Java backend (Spring Boot)"
+        },
+        "screenTranslator.targetLang": {
+          "type": "string",
+          "default": "vi",
+          "enum": ["vi", "en"],
+          "enumDescriptions": ["Tiếng Việt", "Tiếng Anh"],
+          "description": "Ngôn ngữ dịch sang"
+        },
+        "screenTranslator.overlayOpacity": {
+          "type": "number",
+          "default": 0.9,
+          "minimum": 0.3,
+          "maximum": 1.0,
+          "description": "Độ trong suốt của overlay (0.3 - 1.0)"
+        },
+        "screenTranslator.fontSize": {
+          "type": "number",
+          "default": 14,
+          "minimum": 10,
+          "maximum": 24,
+          "description": "Cỡ chữ bản dịch trong overlay"
+        }
+      }
+    },
+
+    "menus": {
+      "commandPalette": [
+        { "command": "screenTranslator.translateScreen" },
+        { "command": "screenTranslator.selectRegion" },
+        { "command": "screenTranslator.toggleOverlay" },
+        { "command": "screenTranslator.switchLang" }
+      ]
+    }
+  },
+
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile",
+    "package": "vsce package"
+  },
+
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+
+  "dependencies": {
+    "screenshot-desktop": "^1.15.0"
+  }
+}

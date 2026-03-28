@@ -1,0 +1,23 @@
+# Node/Electron
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Electron build output
+out/
+dist/
+
+# Java/Maven
+java-backend/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

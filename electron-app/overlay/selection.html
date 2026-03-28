@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+
+  body {
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.35);
+    cursor: crosshair;
+    overflow: hidden;
+  }
+
+  /* Hướng dẫn ở giữa màn hình */
+  #hint {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 15px;
+    text-align: center;
+    pointer-events: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    line-height: 1.8;
+  }
+
+  #hint span { color: #FFD700; font-weight: bold; }
+
+  /* Vùng đang kéo chọn */
+  #selection {
+    position: fixed;
+    border: 2px solid #FFD700;
+    background: rgba(255, 215, 0, 0.08);
+    display: none;
+    pointer-events: none;
+  }
+
+  /* Kích thước vùng chọn */
+  #size-label {
+    position: fixed;
+    background: #FFD700;
+    color: #000;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 2px 7px;
+    border-radius: 4px;
+    display: none;
+    pointer-events: none;
+  }
+
+  /* Crosshair lines */
+  #crosshair-h, #crosshair-v {
+    position: fixed;
+    background: rgba(255, 215, 0, 0.3);
+    pointer-events: none;
+  }
+  #crosshair-h { height: 1px; width: 100%; top: 0; left: 0; }
+  #crosshair-v { width: 1px; height: 100%; top: 0; left: 0; }
+</style>
+</head>
+<body>
+
+<div id="hint">
+  <span>Kéo chuột</span> để chọn vùng cần dịch<br>
+  <span style="font-size:12px;color:#aaa">Nhấn ESC để huỷ</span>
+</div>
+
+<div id="crosshair-h"></div>
+<div id="crosshair-v"></div>
+<div id="selection"></div>
+<div id="size-label"></div>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+const hint       = document.getElementById('hint');
+const selBox     = document.getElementById('selection');
+const sizeLabel  = document.getElementById('size-label');
+const crossH     = document.getElementById('crosshair-h');
+const crossV     = document.getElementById('crosshair-v');
+
+let startX = 0, startY = 0;
+let isDragging = false;
+
+// ── Crosshair theo chuột ──────────────────────────────────────────────────────
+document.addEventListener('mousemove', (e) => {
+    crossH.style.top = e.clientY + 'px';
+    crossV.style.left = e.clientX + 'px';
+
+    if (isDragging) {
+        hint.style.display = 'none';
+        updateSelection(e.clientX, e.clientY);
+    }
+});
+
+// ── Bắt đầu kéo ──────────────────────────────────────────────────────────────
+document.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    startX = e.clientX;
+    startY = e.clientY;
+    isDragging = true;
+
+    selBox.style.display = 'block';
+    sizeLabel.style.display = 'block';
+    updateSelection(startX, startY);
+});
+
+// ── Thả chuột → gửi vùng đã chọn ─────────────────────────────────────────────
+document.addEventListener('mouseup', (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+
+    const x = Math.min(startX, e.clientX);
+    const y = Math.min(startY, e.clientY);
+    const w = Math.abs(e.clientX - startX);
+    const h = Math.abs(e.clientY - startY);
+
+    // Bỏ qua nếu chọn quá nhỏ (< 20px)
+    if (w < 20 || h < 20) {
+        resetUI();
+        return;
+    }
+
+    // Lấy tỉ lệ pixel thật (HiDPI/Retina)
+    const dpr = window.devicePixelRatio || 1;
+
+    ipcRenderer.send('region-selected', {
+        x: Math.round(x * dpr),
+        y: Math.round(y * dpr),
+        width:  Math.round(w * dpr),
+        height: Math.round(h * dpr)
+    });
+});
+
+// ── ESC để huỷ ────────────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        ipcRenderer.send('selection-cancelled');
+    }
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function updateSelection(curX, curY) {
+    const x = Math.min(startX, curX);
+    const y = Math.min(startY, curY);
+    const w = Math.abs(curX - startX);
+    const h = Math.abs(curY - startY);
+
+    selBox.style.left   = x + 'px';
+    selBox.style.top    = y + 'px';
+    selBox.style.width  = w + 'px';
+    selBox.style.height = h + 'px';
+
+    // Label kích thước
+    sizeLabel.textContent = `${w} × ${h}`;
+    sizeLabel.style.left = (x + w / 2 - 30) + 'px';
+    sizeLabel.style.top  = (y > 20 ? y - 22 : y + h + 4) + 'px';
+}
+
+function resetUI() {
+    isDragging = false;
+    selBox.style.display = 'none';
+    sizeLabel.style.display = 'none';
+    hint.style.display = 'block';
+}
+</script>
+</body>
+</html>

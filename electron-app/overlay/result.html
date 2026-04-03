@@ -66,7 +66,7 @@ ipcRenderer.on('apply-preferences', (event, preferences) => {
 
 ipcRenderer.on('show-result', (event, data) => {
   if (data.status === 'loading') {
-    content.innerHTML = '<div class="status-text">Dang nhan dien va dich...</div>';
+    content.innerHTML = '<div class="status-text">...</div>';
     return;
   }
 

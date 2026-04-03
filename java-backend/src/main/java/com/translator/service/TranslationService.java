@@ -261,27 +261,52 @@ public class TranslationService {
     }
 
     private String extractJson(String text) {
-        int start = text.indexOf("{");
-        int end = text.lastIndexOf("}");
-        if (start >= 0 && end > start) {
-            return text.substring(start, end + 1);
+        String normalized = text == null ? "" : text.trim();
+
+        int fenceStart = normalized.indexOf("```");
+        if (fenceStart >= 0) {
+            int fenceEnd = normalized.lastIndexOf("```");
+            if (fenceEnd > fenceStart) {
+                normalized = normalized.substring(fenceStart + 3, fenceEnd).trim();
+                if (normalized.startsWith("json")) {
+                    normalized = normalized.substring(4).trim();
+                }
+            }
         }
-        return text;
+
+        int start = normalized.indexOf("{");
+        int end = normalized.lastIndexOf("}");
+        if (start >= 0 && end > start) {
+            return normalized.substring(start, end + 1);
+        }
+        return normalized;
     }
 
     // ================================
     // PROMPT
     // ================================
-    private String buildPrompt(String text, String lang) {
-        return "Translate to " + lang +
-               ". Keep tone, emotion, names.\n" +
-               "Natural, not literal.\n\n" +
-               text;
-    }
-
     private String buildVisionPrompt(String lang) {
-        return "Extract all text and translate to " + lang +
-               ". Return JSON ONLY: {\"original\":\"...\",\"translated\":\"...\"}";
+    return "You are an OCR and translation expert.\n" +
+           "Task:\n" +
+           "1. Extract ALL visible text from the image (preserve reading order)\n" +
+           "2. Translate the extracted text to " + lang + "\n\n" +
+           "Rules:\n" +
+           "- If text is partial/unclear, include best guess with [?]\n" +
+           "- Preserve line breaks in original\n" +
+           "- Keep untranslatable items (codes, URLs, proper nouns) as-is\n\n" +
+           "Respond ONLY with valid JSON, no markdown, no explanation:\n" +
+           "{\"original\": \"<extracted text>\", \"translated\": \"<translated text>\"}";
+    }
+    private String buildPrompt(String text, String lang) {
+        return "You are a professional translator.\n" +
+            "Translate the following text to " + lang + ".\n\n" +
+            "Rules:\n" +
+            "- Preserve tone, emotion, and intent — not word-for-word\n" +
+            "- Keep proper nouns, names, brands unchanged\n" +
+            "- Match the original style (formal/casual/technical)\n" +
+            "- If a phrase has no natural equivalent, adapt culturally\n" +
+            "- Output ONLY the translated text, no explanation\n\n" +
+            "Text to translate:\n" + text;
     }
 
     public boolean hasGeminiKey(String runtimeGeminiApiKey) {

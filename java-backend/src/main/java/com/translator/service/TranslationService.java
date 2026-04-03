@@ -52,7 +52,7 @@ public class TranslationService {
     // TEXT TRANSLATE
     // ================================
     @Cacheable(value = "translations", key = "#text + ':' + #targetLang")
-    public TranslationResult translate(String text, String targetLang) {
+    public TranslationResult translate(String text, String targetLang, String runtimeGeminiApiKey) {
 
         if (text == null || text.isBlank()) {
             return new TranslationResult("", "auto", targetLang, "empty");
@@ -61,8 +61,8 @@ public class TranslationService {
         String input = text.length() > 5000 ? text.substring(0, 5000) : text;
 
         try {
-            if (hasGeminiKey()) {
-                return translateWithGemini(input, targetLang);
+            if (hasGeminiKey(runtimeGeminiApiKey)) {
+                return translateWithGemini(input, targetLang, runtimeGeminiApiKey);
             }
         } catch (Exception e) {
             log.warn("Gemini lỗi → fallback Google: {}", e.getMessage());
@@ -75,10 +75,10 @@ public class TranslationService {
     // IMAGE TRANSLATE
     // ================================
     @Cacheable(value = "translations", key = "#root.target.hash(#imageBase64) + ':img:' + #targetLang")
-    public TranslationResult translateFromImage(String imageBase64, String targetLang) {
+    public TranslationResult translateFromImage(String imageBase64, String targetLang, String runtimeGeminiApiKey) {
 
         try {
-            return translateVisionGemini(imageBase64, targetLang);
+            return translateVisionGemini(imageBase64, targetLang, runtimeGeminiApiKey);
         } catch (Exception e) {
             log.warn("Vision fail → fallback text empty: {}", e.getMessage());
             return new TranslationResult("[Vision failed]", "auto", targetLang, "vision-error");
@@ -88,13 +88,13 @@ public class TranslationService {
     // ================================
     // GEMINI TEXT
     // ================================
-    private TranslationResult translateWithGemini(String text, String targetLang)
+    private TranslationResult translateWithGemini(String text, String targetLang, String runtimeGeminiApiKey)
         throws Exception {
 
         String prompt = buildPrompt(text, targetLang);
         String body = buildTextRequest(prompt);
 
-        String result = callGeminiWithFallback(body);
+        String result = callGeminiWithFallback(body, runtimeGeminiApiKey);
 
         return new TranslationResult(result, "auto", targetLang, "gemini");
     }
@@ -102,13 +102,13 @@ public class TranslationService {
     // ================================
     // GEMINI VISION
     // ================================
-    private TranslationResult translateVisionGemini(String base64, String targetLang)
+    private TranslationResult translateVisionGemini(String base64, String targetLang, String runtimeGeminiApiKey)
         throws Exception {
 
         String prompt = buildVisionPrompt(targetLang);
         String body = buildVisionRequest(prompt, base64);
 
-        String raw = callGeminiWithFallback(body);
+        String raw = callGeminiWithFallback(body, runtimeGeminiApiKey);
 
         return parseVisionResponse(raw, targetLang);
     }
@@ -116,10 +116,10 @@ public class TranslationService {
     // ================================
     // GEMINI CORE + RETRY
     // ================================
-    private String callGeminiWithFallback(String body) throws Exception {
+    private String callGeminiWithFallback(String body, String runtimeGeminiApiKey) throws Exception {
 
         for (int i = 0; i < 2; i++) {
-            HttpResponse<String> res25 = sendRequest(GEMINI_25, body);
+            HttpResponse<String> res25 = sendRequest(GEMINI_25, body, runtimeGeminiApiKey);
 
             if (res25.statusCode() == 200) {
                 return parseGemini(res25.body());
@@ -128,7 +128,7 @@ public class TranslationService {
             if (res25.statusCode() == 429) {
                 log.warn("2.5 rate limit → thử Lite");
 
-                HttpResponse<String> resLite = sendRequest(GEMINI_LITE, body);
+                HttpResponse<String> resLite = sendRequest(GEMINI_LITE, body, runtimeGeminiApiKey);
 
                 if (resLite.statusCode() == 200) {
                     return parseGemini(resLite.body());
@@ -141,11 +141,13 @@ public class TranslationService {
         throw new RuntimeException("Gemini failed after retry");
     }
 
-    private HttpResponse<String> sendRequest(String url, String body)
+    private HttpResponse<String> sendRequest(String url, String body, String runtimeGeminiApiKey)
         throws IOException, InterruptedException {
 
+        String key = resolveGeminiApiKey(runtimeGeminiApiKey);
+
         HttpRequest req = HttpRequest.newBuilder()
-            .uri(URI.create(url + geminiApiKey))
+            .uri(URI.create(url + key))
             .header("Content-Type", "application/json")
             .timeout(Duration.ofSeconds(30))
             .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -282,8 +284,18 @@ public class TranslationService {
                ". Return JSON ONLY: {\"original\":\"...\",\"translated\":\"...\"}";
     }
 
-    public boolean hasGeminiKey() {
-        return geminiApiKey != null && !geminiApiKey.isBlank();
+    public boolean hasGeminiKey(String runtimeGeminiApiKey) {
+        return resolveGeminiApiKey(runtimeGeminiApiKey) != null;
+    }
+
+    private String resolveGeminiApiKey(String runtimeGeminiApiKey) {
+        if (runtimeGeminiApiKey != null && !runtimeGeminiApiKey.isBlank()) {
+            return runtimeGeminiApiKey;
+        }
+        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
+            return geminiApiKey;
+        }
+        return null;
     }
 
     // ================================

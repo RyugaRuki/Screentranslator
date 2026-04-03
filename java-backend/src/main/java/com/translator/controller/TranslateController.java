@@ -33,22 +33,35 @@ public ResponseEntity<TranslateResponse> translate(@RequestBody TranslateRequest
     }
 
     String targetLang = request.getTargetLang() != null ? request.getTargetLang() : "vi";
+    String runtimeGeminiApiKey = request.getGeminiApiKey();
+    boolean speedMode = request.isSpeedMode();
 
     try {
 
-        if (translationService.hasGeminiKey()) {
+        if (speedMode) {
+            log.info("Chế độ: Speed (OCR + Google)");
+            return ocrAndGoogleTranslate(
+                request.getImageBase64(),
+                targetLang,
+                runtimeGeminiApiKey,
+                null
+            );
+        }
+
+        if (translationService.hasGeminiKey(runtimeGeminiApiKey)) {
 
             try {
                 log.info("Chế độ: Gemini Vision");
 
                 TranslationService.TranslationResult result =
-                    translationService.translateFromImage(request.getImageBase64(), targetLang);
+                    translationService.translateFromImage(request.getImageBase64(), targetLang, runtimeGeminiApiKey);
 
                 return ResponseEntity.ok(TranslateResponse.builder()
                     .originalText("[Vision]")
                     .translatedText(result.translatedText())
                     .detectedSourceLang(result.detectedSourceLang())
                     .targetLang(targetLang)
+                    .modelUsed(result.modelUsed())
                     .build());
 
             } catch (Exception e) {
@@ -57,6 +70,7 @@ public ResponseEntity<TranslateResponse> translate(@RequestBody TranslateRequest
                 return ocrAndGoogleTranslate(
                     request.getImageBase64(),
                     targetLang,
+                    runtimeGeminiApiKey,
                     "Gemini lỗi → dùng Google Translate"
                 );
             }
@@ -67,6 +81,7 @@ public ResponseEntity<TranslateResponse> translate(@RequestBody TranslateRequest
             return ocrAndGoogleTranslate(
                 request.getImageBase64(),
                 targetLang,
+                runtimeGeminiApiKey,
                 null
             );
         }
@@ -80,21 +95,23 @@ public ResponseEntity<TranslateResponse> translate(@RequestBody TranslateRequest
 }
 
     private ResponseEntity<TranslateResponse> ocrAndGoogleTranslate(
-            String imageBase64, String targetLang, String warningMsg) {
+            String imageBase64, String targetLang, String runtimeGeminiApiKey, String warningMsg) {
         try {
             String originalText = ocrService.extractText(imageBase64);
             if (originalText.isBlank()) {
                 return ResponseEntity.ok(TranslateResponse.builder()
                     .originalText("").translatedText("")
+                    .modelUsed("ocr")
                     .errorMessage("Không tìm thấy chữ trong ảnh").build());
             }
             TranslationService.TranslationResult result =
-                translationService.translate(originalText, targetLang);
+                translationService.translate(originalText, targetLang, runtimeGeminiApiKey);
             return ResponseEntity.ok(TranslateResponse.builder()
                 .originalText(originalText)
                 .translatedText(result.translatedText())
                 .detectedSourceLang(result.detectedSourceLang())
                 .targetLang(targetLang)
+                .modelUsed(result.modelUsed())
                 .errorMessage(warningMsg)
                 .build());
         } catch (Exception e) {
@@ -106,7 +123,7 @@ public ResponseEntity<TranslateResponse> translate(@RequestBody TranslateRequest
 
     @GetMapping("/health")
     public ResponseEntity<String> health() {
-        String mode = translationService.hasGeminiKey() ? "Gemini Vision" : "OCR + Google Translate";
+        String mode = translationService.hasGeminiKey(null) ? "Gemini Vision" : "OCR + Google Translate";
         return ResponseEntity.ok("{\"status\":\"ok\",\"mode\":\"" + mode + "\"}");
     }
 }

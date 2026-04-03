@@ -18,13 +18,21 @@ public class TranslateRequest {
     /** Vùng chụp tuỳ chọn - null = toàn màn hình. Format: "x,y,width,height" */
     private String region;
 
+    /** API key truyền từ UI runtime (ưu tiên hơn application.properties) */
+    private String geminiApiKey;
+
+    /** true = ưu tiên tốc độ (OCR + Google), false = dùng Gemini Vision nếu có key */
+    private boolean speedMode;
+
     // ── Constructors ──────────────────────────────────────────────────────────
     public TranslateRequest() {}
 
-    public TranslateRequest(String imageBase64, String targetLang, String region) {
+    public TranslateRequest(String imageBase64, String targetLang, String region, String geminiApiKey, boolean speedMode) {
         this.imageBase64 = imageBase64;
         this.targetLang = targetLang;
         this.region = region;
+        this.geminiApiKey = geminiApiKey;
+        this.speedMode = speedMode;
     }
 
     // ── Getters & Setters ─────────────────────────────────────────────────────
@@ -36,4 +44,10 @@ public class TranslateRequest {
 
     public String getRegion() { return region; }
     public void setRegion(String region) { this.region = region; }
+
+    public String getGeminiApiKey() { return geminiApiKey; }
+    public void setGeminiApiKey(String geminiApiKey) { this.geminiApiKey = geminiApiKey; }
+
+    public boolean isSpeedMode() { return speedMode; }
+    public void setSpeedMode(boolean speedMode) { this.speedMode = speedMode; }
 }

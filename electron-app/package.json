@@ -5,9 +5,35 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "pack": "electron-builder --win",
+    "dist": "electron-builder --win"
   },
-  "dependencies": {
-    "electron": "^28.0.0"
+  "author": "Screen Translator",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.translator.screen",
+    "productName": "Screen Translator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "overlay/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../java-backend/dist/screen-translator-backend",
+        "to": "backend"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    }
   }
 }

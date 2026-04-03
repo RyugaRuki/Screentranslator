@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Screen Translator</title>
+<style>
+  :root {
+    --bg-1: #0b1328;
+    --bg-2: #1a2342;
+    --card: rgba(20, 30, 58, 0.85);
+    --line: rgba(255, 255, 255, 0.14);
+    --text: #e7ecff;
+    --muted: #9aa8d3;
+    --ok: #65d38c;
+    --bad: #ff8f8f;
+    --gold: #ffd772;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Noto Sans", sans-serif;
+    color: var(--text);
+    min-height: 100vh;
+    background:
+      radial-gradient(1000px 500px at -10% -20%, #24345f 0%, transparent 55%),
+      radial-gradient(1000px 500px at 120% 110%, #2a1f4f 0%, transparent 55%),
+      linear-gradient(140deg, var(--bg-1), var(--bg-2));
+    display: grid;
+    place-items: center;
+    padding: 20px;
+  }
+
+  .card {
+    width: min(100%, 800px);
+    border: 1px solid var(--line);
+    background: var(--card);
+    border-radius: 18px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+    padding: 20px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .title { font-size: 26px; font-weight: 700; }
+
+  .pill {
+    font-size: 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    padding: 6px 10px;
+    color: var(--muted);
+  }
+
+  .status {
+    margin-bottom: 14px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .region-status {
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 999px; background: var(--bad); }
+  .dot.ok { background: var(--ok); }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  button {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    cursor: pointer;
+    padding: 11px 14px;
+    font-size: 14px;
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+
+  button:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.14); }
+
+  .btn-main {
+    background: linear-gradient(120deg, #ffc941, #ffdb7a);
+    color: #2b2106;
+    font-weight: 700;
+    border: 1px solid rgba(255, 224, 140, 0.9);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .tab {
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .tab.active {
+    color: #1e1a09;
+    background: var(--gold);
+    border-color: rgba(255, 236, 180, 0.95);
+    font-weight: 700;
+  }
+
+  .panel {
+    display: none;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .panel.active { display: block; }
+
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .grid-three {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .field input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .small { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+  .history-list {
+    max-height: 180px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+  }
+
+  .item {
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .meta { color: #93a1cf; font-size: 11px; margin-bottom: 4px; }
+  .ori { color: #aab3d6; font-size: 12px; margin-bottom: 4px; }
+  .trans { color: #ffd772; font-size: 12px; }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="header">
+      <h1 class="title">Screen Translator</h1>
+      <div class="pill" id="lang-pill">Target: VI</div>
+    </div>
+
+    <div class="status">
+      <span class="dot" id="status-dot"></span>
+      <span id="status-text">Backend: Dang kiem tra...</span>
+    </div>
+
+    <div class="region-status" id="region-status">Vung da luu: Chua co</div>
+
+    <div class="actions">
+      <button class="btn-main" id="btn-start">Bat dau dich (<span id="hk-select-label">F2</span>)</button>
+      <button id="btn-repeat">Dich lai vung da chon (<span id="hk-repeat-label">F6</span>)</button>
+      <button id="btn-refresh">Kiem tra backend</button>
+      <button id="btn-exit">Thoat chuong trinh</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="settings">Cai dat API key</button>
+      <button class="tab" data-tab="history">Lich su dich tam thoi</button>
+    </div>
+
+    <section class="panel active" id="panel-settings">
+      <div class="grid-two">
+        <div class="field"><label>Gemini</label><input id="key-gemini" type="password" placeholder="AIza..." /></div>
+        <div class="field"><label>OpenAI</label><input id="key-openai" type="password" placeholder="sk-..." /></div>
+        <div class="field"><label>Claude</label><input id="key-claude" type="password" placeholder="sk-ant-..." /></div>
+        <div class="field"><label>DeepSeek</label><input id="key-deepseek" type="password" placeholder="sk-..." /></div>
+      </div>
+      <div class="grid-three">
+        <div class="field"><label>Hotkey chon vung</label><input id="hotkey-select" type="text" placeholder="F2" /></div>
+        <div class="field"><label>Hotkey dich lai</label><input id="hotkey-repeat" type="text" placeholder="F6" /></div>
+        <div class="field"><label>Hotkey doi ngon ngu</label><input id="hotkey-toggle-lang" type="text" placeholder="F5" /></div>
+      </div>
+      <div class="grid-two" style="margin-top:10px;">
+        <div class="field"><label>Khung ket qua - width</label><input id="result-width" type="number" min="320" max="1200" step="10" /></div>
+        <div class="field"><label>Khung ket qua - height</label><input id="result-height" type="number" min="220" max="1000" step="10" /></div>
+      </div>
+      <div class="grid-two" style="margin-top:10px;">
+        <div class="field"><label>Co chu hien thi</label><input id="result-font-size" type="number" min="16" max="72" step="1" /></div>
+        <div></div>
+      </div>
+      <div class="row" style="align-items:center;">
+        <input id="speed-mode" type="checkbox" />
+        <label for="speed-mode" style="font-size:13px;color:var(--text);">Uu tien toc do (OCR + Google, nhanh hon)</label>
+      </div>
+      <div class="row" style="align-items:center;">
+        <input id="auto-translate" type="checkbox" />
+        <label for="auto-translate" style="font-size:13px;color:var(--text);">Auto dich lap</label>
+      </div>
+      <div class="row" style="align-items:center; margin-top:6px;">
+        <label for="auto-interval" style="font-size:13px;color:var(--muted);">Chu ky:</label>
+        <select id="auto-interval" style="padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:rgba(255,255,255,0.08); color:var(--text);">
+          <option value="500">0.5 giay</option>
+          <option value="1000">1 giay</option>
+          <option value="2000">2 giay</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="btn-save-settings">Luu cai dat</button>
+      </div>
+      <div class="small">Ban co the doi hotkey theo accelerator cua Electron (vd: F2, Ctrl+Shift+S). Vision mode se bo qua goi backend neu anh vung chon khong doi.</div>
+      <div class="small" id="settings-msg"></div>
+    </section>
+
+    <section class="panel" id="panel-history">
+      <div class="row" style="margin-top:0; margin-bottom:8px;">
+        <button id="btn-reload-history">Tai lai lich su</button>
+        <button id="btn-clear-history">Xoa lich su</button>
+      </div>
+      <div class="history-list" id="history-list"></div>
+      <div class="small">Lich su nay chi ton tai trong phien hien tai va se tu dong xoa khi thoat chuong trinh.</div>
+    </section>
+  </main>
+
+<script>
+const { ipcRenderer } = require('electron');
+
+const dot = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+const langPill = document.getElementById('lang-pill');
+const regionStatus = document.getElementById('region-status');
+const settingsMsg = document.getElementById('settings-msg');
+const historyList = document.getElementById('history-list');
+const hkSelectLabel = document.getElementById('hk-select-label');
+const hkRepeatLabel = document.getElementById('hk-repeat-label');
+
+let currentHotkeys = {
+  selectRegion: 'F2',
+  toggleLang: 'F5',
+  repeatRegion: 'F6'
+};
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function refreshStatus() {
+  const status = await ipcRenderer.invoke('get-runtime-status');
+  dot.classList.toggle('ok', Boolean(status.backendReady));
+  statusText.textContent = status.backendReady ? 'Backend: San sang' : 'Backend: Chua san sang';
+  langPill.textContent = `Target: ${(status.targetLang || 'vi').toUpperCase()}`;
+  if (status.hotkeys) {
+    currentHotkeys = { ...currentHotkeys, ...status.hotkeys };
+    hkSelectLabel.textContent = currentHotkeys.selectRegion || 'F2';
+    hkRepeatLabel.textContent = currentHotkeys.repeatRegion || 'F6';
+  }
+  const repeatKey = currentHotkeys.repeatRegion || 'F6';
+  const selectKey = currentHotkeys.selectRegion || 'F2';
+  regionStatus.textContent = status.hasSavedRegion ? `Vung da luu: San sang (bam ${repeatKey})` : `Vung da luu: Chua co (bam ${selectKey} de chon lan dau)`;
+}
+
+async function loadSettings() {
+  const cfg = await ipcRenderer.invoke('get-app-config');
+  document.getElementById('key-gemini').value = cfg.apiKeys?.gemini || '';
+  document.getElementById('key-openai').value = cfg.apiKeys?.openai || '';
+  document.getElementById('key-claude').value = cfg.apiKeys?.claude || '';
+  document.getElementById('key-deepseek').value = cfg.apiKeys?.deepseek || '';
+
+  document.getElementById('hotkey-select').value = cfg.hotkeys?.selectRegion || 'F2';
+  document.getElementById('hotkey-repeat').value = cfg.hotkeys?.repeatRegion || 'F6';
+  document.getElementById('hotkey-toggle-lang').value = cfg.hotkeys?.toggleLang || 'F5';
+
+  document.getElementById('result-width').value = cfg.resultWindow?.width || 420;
+  document.getElementById('result-height').value = cfg.resultWindow?.height || 300;
+  document.getElementById('result-font-size').value = cfg.preferences?.resultFontSize || 31;
+  document.getElementById('speed-mode').checked = cfg.preferences?.speedMode !== false;
+  document.getElementById('auto-translate').checked = Boolean(cfg.preferences?.autoTranslateEnabled);
+  document.getElementById('auto-interval').value = String(cfg.preferences?.autoTranslateIntervalMs || 1000);
+}
+
+async function saveSettings() {
+  const response = await ipcRenderer.invoke('save-app-config', {
+    apiKeys: {
+      gemini: document.getElementById('key-gemini').value,
+      openai: document.getElementById('key-openai').value,
+      claude: document.getElementById('key-claude').value,
+      deepseek: document.getElementById('key-deepseek').value
+    },
+    hotkeys: {
+      selectRegion: document.getElementById('hotkey-select').value,
+      repeatRegion: document.getElementById('hotkey-repeat').value,
+      toggleLang: document.getElementById('hotkey-toggle-lang').value
+    },
+    resultWindow: {
+      width: document.getElementById('result-width').value,
+      height: document.getElementById('result-height').value
+    },
+    preferences: {
+      speedMode: document.getElementById('speed-mode').checked,
+      autoTranslateEnabled: document.getElementById('auto-translate').checked,
+      autoTranslateIntervalMs: Number(document.getElementById('auto-interval').value || 1000),
+      resultFontSize: Number(document.getElementById('result-font-size').value || 31)
+    }
+  });
+
+  if (response.ok) {
+    settingsMsg.textContent = 'Da luu cai dat thanh cong.';
+  } else {
+    settingsMsg.textContent = `Da luu, nhung mot so hotkey khong dang ky duoc: ${(response.failed || []).join(', ')}`;
+  }
+
+  await refreshStatus();
+}
+
+async function renderHistory() {
+  const items = await ipcRenderer.invoke('get-history');
+  if (!items.length) {
+    historyList.innerHTML = '<div class="small">Chua co ban ghi nao.</div>';
+    return;
+  }
+
+  historyList.innerHTML = items.map((item) => {
+    const time = new Date(item.createdAt).toLocaleTimeString('vi-VN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+
+    return `<div class="item">
+      <div class="meta">${time} | ${escapeHtml(item.targetLang || '')} | ${escapeHtml(item.modelUsed || '')}</div>
+      <div class="ori">${escapeHtml(item.originalText || '').slice(0, 160)}</div>
+      <div class="trans">${escapeHtml(item.translatedText || '').slice(0, 200)}</div>
+    </div>`;
+  }).join('');
+}
+
+document.getElementById('btn-start').addEventListener('click', async () => {
+  await ipcRenderer.invoke('start-selection');
+});
+
+document.getElementById('btn-refresh').addEventListener('click', async () => {
+  await ipcRenderer.invoke('check-backend');
+  await refreshStatus();
+});
+
+document.getElementById('btn-repeat').addEventListener('click', async () => {
+  await ipcRenderer.invoke('translate-last-region');
+});
+
+document.getElementById('btn-exit').addEventListener('click', async () => {
+  await ipcRenderer.invoke('quit-app');
+});
+
+document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
+document.getElementById('btn-reload-history').addEventListener('click', renderHistory);
+
+document.getElementById('btn-clear-history').addEventListener('click', async () => {
+  await ipcRenderer.invoke('clear-history');
+  await renderHistory();
+});
+
+document.querySelectorAll('.tab').forEach((tabBtn) => {
+  tabBtn.addEventListener('click', async () => {
+    document.querySelectorAll('.tab').forEach((b) => b.classList.remove('active'));
+    tabBtn.classList.add('active');
+
+    const target = tabBtn.getAttribute('data-tab');
+    document.getElementById('panel-settings').classList.toggle('active', target === 'settings');
+    document.getElementById('panel-history').classList.toggle('active', target === 'history');
+
+    if (target === 'history') {
+      await renderHistory();
+    }
+  });
+});
+
+ipcRenderer.on('runtime-status', (event, status) => {
+  dot.classList.toggle('ok', Boolean(status.backendReady));
+  statusText.textContent = status.backendReady ? 'Backend: San sang' : 'Backend: Chua san sang';
+  langPill.textContent = `Target: ${(status.targetLang || 'vi').toUpperCase()}`;
+  const repeatKey = (status.hotkeys?.repeatRegion || currentHotkeys.repeatRegion || 'F6');
+  const selectKey = (status.hotkeys?.selectRegion || currentHotkeys.selectRegion || 'F2');
+  regionStatus.textContent = status.hasSavedRegion ? `Vung da luu: San sang (bam ${repeatKey})` : `Vung da luu: Chua co (bam ${selectKey} de chon lan dau)`;
+
+  if (status.hotkeys) {
+    currentHotkeys = { ...currentHotkeys, ...status.hotkeys };
+    hkSelectLabel.textContent = currentHotkeys.selectRegion || 'F2';
+    hkRepeatLabel.textContent = currentHotkeys.repeatRegion || 'F6';
+  }
+});
+
+ipcRenderer.on('region-missing', () => {
+  const selectKey = currentHotkeys.selectRegion || 'F2';
+  regionStatus.textContent = `Vung da luu: Chua co (bam ${selectKey} de chon lan dau)`;
+});
+
+ipcRenderer.on('history-updated', async () => {
+  const isHistoryOpen = document.getElementById('panel-history').classList.contains('active');
+  if (isHistoryOpen) {
+    await renderHistory();
+  }
+});
+
+(async () => {
+  await loadSettings();
+  await refreshStatus();
+})();
+</script>
+</body>
+</html>

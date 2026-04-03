@@ -109,6 +109,53 @@ npm run package          # tạo file screen-translator-1.0.0.vsix
 4. Khi xuất hiện dialog/text cần dịch: **bấm F2**
 5. Overlay hiện bên cạnh VS Code với bản dịch màu vàng
 
+### Chạy backend + Electron cùng lúc (Windows)
+Nếu đã đóng gói backend bằng `jlink/jpackage`, bạn có thể chạy nhanh bằng script:
+
+```powershell
+./run-all.ps1
+```
+
+Hoặc double-click file CMD:
+
+```
+run-all.cmd
+```
+
+Hoặc double-click file VBS (khong hien console):
+
+```
+run-all.vbs
+```
+
+### Đóng gói app Electron (Windows)
+1) Đóng gói backend (tạo `java-backend/dist/screen-translator-backend`):
+
+```powershell
+cd java-backend\packaging
+./poc_jlink.ps1
+```
+
+Yêu cầu:
+- JDK 17+ và `JAVA_HOME` đã set
+- `mvn` hoặc `mvnw` dùng được trong thư mục `java-backend`
+
+Ghi chú:
+- Set `JPACKAGE_TYPE=exe` để tạo Windows installer (cần WiX trong PATH)
+- Set `JPACKAGE_WIN_CONSOLE=1` để bật console (dễ debug lỗi khởi động)
+- Script bật `--enable-native-access=ALL-UNNAMED` để dùng Tomcat JNI trên JDK mới
+- Nếu `jdeps` không tìm được module, có thể cần chỉ định module thủ công
+
+2) Đóng gói Electron (tự chạy backend trong app):
+
+```powershell
+cd electron-app
+npm install
+npm run dist
+```
+
+File cài đặt sẽ nằm trong `electron-app/dist`.
+
 ### Tip: Chụp vùng dialog (tốt hơn toàn màn hình)
 Hầu hết game JRPG có dialog box cố định ở phía dưới màn hình. Dùng F3 và nhập:
 ```

@@ -10,6 +10,7 @@ public class TranslateResponse {
     private String detectedSourceLang;
     private String targetLang;
     private boolean fromCache;
+    private String modelUsed;
     private String errorMessage;
 
     // ── Constructors ──────────────────────────────────────────────────────────
@@ -17,12 +18,13 @@ public class TranslateResponse {
 
     public TranslateResponse(String originalText, String translatedText,
                               String detectedSourceLang, String targetLang,
-                              boolean fromCache, String errorMessage) {
+                              boolean fromCache, String modelUsed, String errorMessage) {
         this.originalText = originalText;
         this.translatedText = translatedText;
         this.detectedSourceLang = detectedSourceLang;
         this.targetLang = targetLang;
         this.fromCache = fromCache;
+        this.modelUsed = modelUsed;
         this.errorMessage = errorMessage;
     }
 
@@ -44,6 +46,7 @@ public class TranslateResponse {
         private String detectedSourceLang = "";
         private String targetLang = "";
         private boolean fromCache = false;
+        private String modelUsed = "";
         private String errorMessage;
 
         public Builder originalText(String v)       { this.originalText = v; return this; }
@@ -51,11 +54,12 @@ public class TranslateResponse {
         public Builder detectedSourceLang(String v) { this.detectedSourceLang = v; return this; }
         public Builder targetLang(String v)         { this.targetLang = v; return this; }
         public Builder fromCache(boolean v)         { this.fromCache = v; return this; }
+        public Builder modelUsed(String v)          { this.modelUsed = v; return this; }
         public Builder errorMessage(String v)       { this.errorMessage = v; return this; }
 
         public TranslateResponse build() {
             return new TranslateResponse(originalText, translatedText,
-                    detectedSourceLang, targetLang, fromCache, errorMessage);
+                    detectedSourceLang, targetLang, fromCache, modelUsed, errorMessage);
         }
     }
 
@@ -74,6 +78,9 @@ public class TranslateResponse {
 
     public boolean isFromCache()       { return fromCache; }
     public void setFromCache(boolean v) { this.fromCache = v; }
+
+    public String getModelUsed()         { return modelUsed; }
+    public void setModelUsed(String value) { this.modelUsed = value; }
 
     public String getErrorMessage()       { return errorMessage; }
     public void setErrorMessage(String v) { this.errorMessage = v; }
